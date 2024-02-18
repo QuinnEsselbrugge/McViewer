@@ -49,11 +49,37 @@ pub struct CompressedChunk
     pub compressed_data: Vec<u8>,
 }
 
+
+// /// The represents part of a chunk's nbt data stored in the region file
+// ///
+// /// See <https://minecraft.fandom.com/wiki/Chunk_format#NBT_structure>
+// #[derive(Deserialize, Clone, Debug)]
+// pub struct BlockState {
+//     #[serde(rename = "Name")]
+//     pub name: String,
+//     #[serde(rename = "Properties")]
+//     pub properties: Option<Value>,
+// }
+
+// #[derive(Deserialize, Clone, Debug)]
+// #[serde(rename_all = "PascalCase")]
+// pub struct BlockStates {
+//     pub palette: Vec<BlockState>,
+//     pub data: Option<LongArray>,
+// }
+
+// #[derive(Deserialize, Clone, Debug)]
+// #[serde(rename_all = "PascalCase")]
+// pub struct ChunkSection {
+//     pub block_states: Option<BlockStates>,
+//     pub y: i8,
+// }
+
 /// The represents that chunk's nbt data stored in the region file
 ///
 /// See <https://minecraft.fandom.com/wiki/Chunk_format#NBT_structure>
 #[derive(Deserialize, Clone, Debug, Default)]
-pub struct ChunkNbt {
+pub struct Chunk {
     #[serde(rename = "DataVersion")]
     pub data_version: i32,
 
@@ -61,7 +87,7 @@ pub struct ChunkNbt {
     pub status: String,
 
     #[serde(rename = "sections")]
-    pub sections: Vec<Value>,
+    pub sections: Vec<Value>, // todo use serde json to get the values, preferrably not but fuck it we ball. can always imrpove it as long as the logic stays the same we can fix it later
 
     #[serde(rename = "zPos")]
     pub z_pos: i32,
@@ -70,15 +96,16 @@ pub struct ChunkNbt {
     pub x_pos: i32,
 }
 
+
 #[derive(Debug, Clone, Default)]
 pub struct RegionChunks
 {
-    pub chunks: Vec<ChunkNbt>,
+    pub chunks: Vec<Chunk>,
 }
 
 impl RegionChunks
 {
-    pub fn get_chunk(&self, x: i32, z: i32) -> &ChunkNbt
+    pub fn get_chunk(&self, x: i32, z: i32) -> &Chunk
     {
         // see <https://minecraft.fandom.com/wiki/Region_file_format#Header>
 
@@ -158,13 +185,26 @@ fn get_encoded_chunks(data: &mut Vec<u8>, locations: Vec<RegionHeaderLocationEnt
     Ok(encoded_chunks)
 }
 
-fn decode_chunks(compressed_chunks: &mut Vec<CompressedChunk>) -> Result<Vec<ChunkNbt>, Error>
+// theft
+fn get_chunk_nbt(data: &mut Vec<u8>) -> Result<Chunk, Error> {
+    let uncompressed = inflate::decompress_to_vec_zlib(&data);
+    let uncompressed = uncompressed.map_err(|_| Error::from(ErrorKind::UnexpectedEof))?;
+
+    let chunk: Chunk = fastnbt::from_bytes(&uncompressed).unwrap();
+    // let chunk_sections_nbt: Vec<ChunkSection> = fastnbt::from_bytes(&uncompressed).unwrap();
+
+    // chunk.sections = chunk_sections_nbt;
+
+    Ok(chunk)
+}
+
+fn decode_chunks(compressed_chunks: &mut Vec<CompressedChunk>) -> Result<Vec<Chunk>, Error>
 {
     let mut decoded_chunks = Vec::new(); 
 
     for (i) in 0..compressed_chunks.len()
     {
-        let chunk_nbt: ChunkNbt = get_nbt(&mut compressed_chunks[i].compressed_data).expect("Failure on chunk");
+        let chunk_nbt: Chunk = get_chunk_nbt(&mut compressed_chunks[i].compressed_data).expect("Failure on chunk");
 
         decoded_chunks.push(chunk_nbt);
     }
@@ -179,17 +219,16 @@ fn parse_region_chunks(reader: &mut dyn Read, region_header: RegionHeader) -> Re
     reader.read_to_end(&mut chunks_data); // header should have been read already
 
     let mut encoded_chunks: Vec<CompressedChunk> = get_encoded_chunks(&mut chunks_data, region_header.locations).expect("Failure fetching encoded chunks");
-    let mut decoded_chunks: Vec<ChunkNbt> = decode_chunks(&mut encoded_chunks).expect("Chunk decoding failure");
+    let mut decoded_chunks: Vec<Chunk> = decode_chunks(&mut encoded_chunks).expect("Chunk decoding failure");
 
     Ok(RegionChunks{chunks: decoded_chunks})
 }
 
-// theft
-fn get_nbt(data: &mut Vec<u8>) -> Result<ChunkNbt, Error> {
-    let uncompressed = inflate::decompress_to_vec_zlib(&data);
-    let uncompressed = uncompressed.map_err(|_| Error::from(ErrorKind::UnexpectedEof))?;
 
-    Ok(fastnbt::from_bytes(&uncompressed).expect("Error parsing nbt bytes"))
+fn get_blocks_in_chunk(region_chunks: &RegionChunks)
+{
+
+    println!("{:#?}", region_chunks.get_chunk(0, 0).sections[1]);
 }
 
 fn start() -> Result<u32, Error>
@@ -197,9 +236,11 @@ fn start() -> Result<u32, Error>
     let mut reader = BufReader::new(File::open("r.0.0.mca") ?);
 
     let region_header: RegionHeader = parse_region_file_header(&mut reader).expect("Region header not processed properly");
-    let mut region_chunks: RegionChunks = parse_region_chunks(&mut reader, region_header).expect("Region Chunks processing failed");
+    let region_chunks: RegionChunks = parse_region_chunks(&mut reader, region_header).expect("Region chunks processing failed");
 
-    println!("{:#?}", region_chunks.get_chunk(0, 0));
+    // we get chunks by subchunk 16*16*16 to save memory allocation exceeding the cap
+    get_blocks_in_chunk(&region_chunks);
+    // println!("{:#?}", region_chunks.get_chunk(0, 0));
     
     Ok(1)
 }
