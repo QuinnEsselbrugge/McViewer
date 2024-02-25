@@ -9,3 +9,10 @@ edition = "2021"
 fastnbt = "2.4.4"
 miniz_oxide = "0.7.2"
 serde = "1.0.196"
+three-d = "0.16.4"
+three-d-asset = {version = "0.6", features = ["png", "jpeg"] }
+
+
+[dependencies.async-std]
+version = "1.6"
+features = ["attributes"]
