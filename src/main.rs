@@ -23,7 +23,7 @@ async fn start() -> Result<u32, Error>
     let chunk_blocks: Vec<chunk_parser::Block> = chunk_parser::get_blocks_in_chunk(&region_chunks, x, z);
     // println!("HASSDASD");
 
-    chunk_renderer::init().await;
+    chunk_renderer::init(chunk_blocks).await;
     // chunk_renderer::render_chunk(chunk_blocks, x, z); // chunk blocks is consumed
 
     // println!("{:#?}", chunk_blocks);

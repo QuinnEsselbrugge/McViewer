@@ -2,16 +2,15 @@
 use crate::chunk_parser;
 use three_d::*;
 
-pub async fn init()
+pub async fn init(chunk_blocks: Vec<chunk_parser::Block>)
 {
-    println!("HASSDASD");
-
     let window = Window::new(WindowSettings {
-        title: "Shapes!".to_string(),
+        title: "MC Viewer!".to_string(),
         max_size: Some((1280, 720)),
         ..Default::default()
     })
     .unwrap();
+
     let context = window.gl();
 
     let mut camera = Camera::new_perspective(
@@ -39,14 +38,16 @@ pub async fn init()
     // img.width = 16;
     // img.height = 16;
     // img.wrap_t
+
+    // preload all possible chunk textures
     let mut loaded = three_d_asset::io::load_async(&[
-        "src/assets/Test.png",
+        "src/assets/textures/dirt.png",
     ])
     .await
     .unwrap();
 
     // Box
-    let mut cpu_texture: CpuTexture = loaded.deserialize("Test").unwrap();
+    let mut cpu_texture: CpuTexture = loaded.deserialize("dirt").unwrap();
     cpu_texture.data.to_linear_srgb();
     let mut box_object = Gm::new(
         Mesh::new(&context, &CpuMesh::cube()),
