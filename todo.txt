@@ -1,2 +1,4 @@
-remove raw unwraps (use proper handling)
-optimize not having to load useless air above build limit
+- Update shift size in accordance with pallete size
+- Map grass color to biome type (hard)
+- Create shapes for unique block cases (Maybe generate instructions?) (Glass panes, ladders, stairs, enchanting table, etc). (Use UVS from JSON files and use TriMesh object (see file))
+- 

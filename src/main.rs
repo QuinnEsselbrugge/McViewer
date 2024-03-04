@@ -36,7 +36,7 @@ async fn start() -> Result<u32, Error>
     // };
 
 
-    chunk_renderer::render_chunk(chunk_blocks, 0, 0).await;
+    chunk_renderer::render_chunk(chunk_blocks).await;
     // chunk_renderer::render_chunk(chunk_blocks, x, z); // chunk blocks is consumed
 
     // println!("{:#?}", chunk_blocks);

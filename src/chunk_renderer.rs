@@ -1,10 +1,11 @@
+use std::path::Path;
 
 use crate::chunk_parser;
 use three_d::*;
 use three_d_asset::io::RawAssets;
 
 const TEXTURES_PATH: &str = "src/assets/textures/"; // todo, settings
-const BLOCK_SCALE: f32 = 0.1;
+const BLOCK_SCALE: f32 = 1.0;
 
 pub struct RendererContext
 {
@@ -113,7 +114,7 @@ pub async fn init(chunk_blocks: Vec<chunk_parser::Block>)
 
 // todo: GREATLY FUCKING IMPROVE. Fix the logic to be less shit andd remove the init setup. It was complaining that render context went out of scope, soemthing to do with the liftimes...
 // also make pretty >:( also fix the fucking position logic god fucking damnit... lmao
-pub async fn render_chunk(chunk_blocks: Vec<chunk_parser::Block>, x: i32, z: i32)
+pub async fn render_chunk(chunk_blocks: Vec<chunk_parser::Block>)
 {
     let window = Window::new(WindowSettings {
         title: "MC Viewer!".to_string(),
@@ -144,7 +145,8 @@ pub async fn render_chunk(chunk_blocks: Vec<chunk_parser::Block>, x: i32, z: i32
     let mut x: f32 = 0.0;
     let mut y: f32 = 0.0;
     let mut z: f32 = 0.0;
-    let mut block_index: i64 = 0;
+
+    let block_size = BLOCK_SCALE * 2.0;
 
     for block in chunk_blocks
     {
@@ -166,18 +168,18 @@ pub async fn render_chunk(chunk_blocks: Vec<chunk_parser::Block>, x: i32, z: i32
             cube_array.push(cube);
         }
 
-        x += BLOCK_SCALE;
+        x += block_size;
 
-        if x >= 0.16
+        if x >= 32.0
         {
             x = 0.0;
-            z += BLOCK_SCALE;
+            z += block_size;
         }
 
-        if z >= 0.16
+        if z >= 32.0
         {
             z = 0.0;
-            y += BLOCK_SCALE;
+            y += block_size;
         }
     }   
 
@@ -190,7 +192,7 @@ pub async fn render_chunk(chunk_blocks: Vec<chunk_parser::Block>, x: i32, z: i32
         if redraw {
             frame_input.screen().clear(ClearState::default()).render(
                 &camera,
-                cube_array[0].into_iter().chain(&cube_array[1]).chain(&cube_array[2]).chain(&cube_array[3]).chain(&cube_array[4]).chain(&cube_array[5]).chain(&cube_array[6]).chain(&cube_array[7]).chain(&cube_array[8]).chain(&cube_array[9]).chain(&cube_array[10]).chain(&cube_array[11]).chain(&cube_array[12]).chain(&cube_array[13]),
+                cube_array.iter().flat_map(|it| it), // blocks are consumed
                 &[],
             );
         }
@@ -212,7 +214,13 @@ async fn get_chunk_textures(chunk_blocks: &Vec<chunk_parser::Block>) -> Vec<Stri
         let file_extension: String = String::from(".png"); // tmp
         let file_path = format!("{}{}{}", TEXTURES_PATH, block_name, file_extension);
 
-        texture_load_list.push(file_path)
+        if (Path::new(&file_path).exists())
+        {
+            texture_load_list.push(file_path)
+        } else
+        {
+            texture_load_list.push(String::from("D:/Projects2023/Rust/mc_viewer/src/assets/textures/bedrock.png"))
+        }
     }
 
     return texture_load_list;
